@@ -31,8 +31,9 @@ class SimpleAlignmentIo(LineIo):
     In most cases it is probably preferable to use `AlignmentIo` instead of
     this class since it supports multilevel alignments.
     """
-    def __init__(self, framePeriod):
+    def __init__(self, framePeriod, defaultLabel=None):
         self.framePeriod = framePeriod
+        self.defaultLabel = defaultLabel
 
         if self.framePeriod < 1e-7:
             # N.B. I believe write-then-read is guaranteed to recover original
@@ -73,9 +74,14 @@ class SimpleAlignmentIo(LineIo):
 
         alignment = []
         for line in alignmentLines:
-            startTicks, endTicks, label = line.strip().split(None, 2)
-            startTime = int(round(int(startTicks) / divisor))
-            endTime = int(round(int(endTicks) / divisor))
+            split = line.strip().split(None, 2)
+            if len(split) < 3 and self.defaultLabel is not None:
+                startTicks, endTicks = split
+                label = self.defaultLabel
+            else:
+                startTicks, endTicks, label = split
+            startTime = float(startTicks) / divisor
+            endTime = float(endTicks) / divisor
             alignment.append((startTime, endTime, label, None))
 
         return alignment
@@ -410,11 +416,11 @@ class AlignmentIo(LineIo):
     ... ]
     True
     """
-    def __init__(self, framePeriod, levelSep=None):
+    def __init__(self, framePeriod, levelSep=None, defaultLabel=None):
         self.framePeriod = framePeriod
         self.levelSep = levelSep
 
-        self.simpleIo = SimpleAlignmentIo(self.framePeriod)
+        self.simpleIo = SimpleAlignmentIo(self.framePeriod, defaultLabel=defaultLabel)
 
     def writeLines(self, alignment):
         """Writes the lines of an HTK-style alignment file.
